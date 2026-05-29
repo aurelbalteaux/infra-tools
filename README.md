@@ -4,7 +4,33 @@ Go-based tooling for the infra-deployments repository. These tools analyse
 the ArgoCD kustomize structure to detect which environments, clusters, and
 components are affected by a set of file changes.
 
-## Tools
+## Usage as GitHub Action
+
+This repository can be consumed as a GitHub Action in workflows:
+
+### Environment Detection (env-detector)
+
+```yaml
+- uses: aurelbalteaux/infra-tools@main
+  with:
+    command: env-detector
+    pr-number: ${{ github.event.pull_request.number }}
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### Render Diff (render-diff)
+
+```yaml
+- uses: aurelbalteaux/infra-tools@main
+  with:
+    command: render-diff
+    base-ref: origin/main
+    output-mode: ci-summary,ci-comment
+```
+
+See [action.yml](./action.yml) for all available inputs and outputs.
+
+## Usage as Standalone CLI
 
 ### env-detector
 
