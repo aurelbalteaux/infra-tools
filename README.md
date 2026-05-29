@@ -192,9 +192,8 @@ go tool cover -html cover.out
 
 ### CI
 
-The tools are tested by `.github/workflows/infra-tools-ci.yaml`, which
-triggers on changes under `infra-tools/` and runs `make test` and `make lint`.
+The tools are tested by `.github/workflows/test.yaml`, which runs on pull
+requests and pushes to main, executing `make build`, `make test`, and `make lint`.
 
-The `render-diff` tool also runs in CI via
-`.github/workflows/pr-render-diff.yaml`, which posts a summary of kustomize
-render changes as a PR comment.
+Container images are published to quay.io/aurelbalteaux/infra-tools by
+`.github/workflows/publish-image.yaml` on main branch pushes and version tags.
