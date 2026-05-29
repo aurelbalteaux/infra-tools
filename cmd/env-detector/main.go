@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -36,6 +37,7 @@ func main() {
 		logFile           = flag.String("log-file", "", "Write debug-level logs to this file (in addition to INFO-level logs on stdout)")
 		enforceRingDeploy = flag.Bool("enforce-ring-deployment", false, "Fail when both staging and production overlays are directly modified in the same PR")
 		ringReportFile    = flag.String("ring-report-file", "", "Write ring deployment check result (markdown) to this file for external consumers like PR comments")
+		jsonOutput        = flag.Bool("json", false, "Output results as JSON")
 	)
 	flag.Parse()
 
@@ -83,6 +85,21 @@ func main() {
 	}
 	if len(changedFiles) == 0 {
 		slog.Info("No changed files detected")
+
+		// Output empty result
+		if *jsonOutput {
+			output := map[string][]string{
+				"affected_environments": {},
+				"affected_clusters":     {},
+				"labels":                {"environment/none"},
+			}
+			enc := json.NewEncoder(os.Stdout)
+			enc.SetIndent("", "  ")
+			if err := enc.Encode(output); err != nil {
+				fatal("encoding JSON output", "err", err)
+			}
+		}
+
 		if !*dryRun {
 			if err := syncLabels(ctx, *githubToken, *repo, *prNumber, []string{"environment/none"}); err != nil {
 				fatal("syncing labels", "err", err)
@@ -137,7 +154,28 @@ func main() {
 		labels = append(labels, ghclient.NeedsApprovalProductionLabel)
 	}
 
-	printSummary(result, labels, headSHA, baseSHA)
+	// Output results: either as JSON or human-readable format
+	if *jsonOutput {
+		// Convert Environment types to strings for JSON output
+		envKeys := slices.Sorted(maps.Keys(result.AffectedEnvironments))
+		envStrings := make([]string, len(envKeys))
+		for i, env := range envKeys {
+			envStrings[i] = string(env)
+		}
+
+		output := map[string][]string{
+			"affected_environments": envStrings,
+			"affected_clusters":     slices.Sorted(maps.Keys(result.AffectedClusters)),
+			"labels":                labels,
+		}
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(output); err != nil {
+			fatal("encoding JSON output", "err", err)
+		}
+	} else {
+		printSummary(result, labels, headSHA, baseSHA)
+	}
 
 	if !*dryRun {
 		// Step 5: Sync labels via GitHub API

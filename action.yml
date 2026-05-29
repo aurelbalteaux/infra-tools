@@ -42,17 +42,21 @@ inputs:
     description: 'Print results without calling GitHub API (env-detector)'
     required: false
     default: 'false'
+  enforce-ring-deployment:
+    description: 'Fail when both staging and production overlays are directly modified (env-detector)'
+    required: false
+    default: 'false'
+  ring-report-file:
+    description: 'Write ring deployment check result to this file (env-detector)'
+    required: false
 
 outputs:
   affected-environments:
     description: 'JSON array of affected environment names (env-detector)'
-    value: ${{ steps.run.outputs.affected-environments }}
   affected-clusters:
     description: 'JSON array of affected cluster names (env-detector)'
-    value: ${{ steps.run.outputs.affected-clusters }}
-  diff-summary:
-    description: 'Summary of render differences (render-diff)'
-    value: ${{ steps.run.outputs.diff-summary }}
+  labels:
+    description: 'JSON array of labels that would be applied (env-detector)'
 
 runs:
   using: 'docker'
@@ -70,8 +74,11 @@ runs:
     LOG_FILE: ${{ inputs.log-file }}
     CLUSTER_LABELS: ${{ inputs.cluster-labels }}
     DRY_RUN: ${{ inputs.dry-run }}
+    ENFORCE_RING_DEPLOYMENT: ${{ inputs.enforce-ring-deployment }}
+    RING_REPORT_FILE: ${{ inputs.ring-report-file }}
     GITHUB_SERVER_URL: ${{ github.server_url }}
     GITHUB_RUN_ID: ${{ github.run_id }}
+    GITHUB_STEP_SUMMARY: ${{ env.GITHUB_STEP_SUMMARY }}
 
 branding:
   icon: 'git-pull-request'

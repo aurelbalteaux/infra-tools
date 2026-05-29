@@ -37,11 +37,37 @@ case "$COMMAND" in
       ARGS+=("--dry-run")
     fi
 
+    if [[ "${ENFORCE_RING_DEPLOYMENT:-false}" == "true" ]]; then
+      ARGS+=("--enforce-ring-deployment")
+    fi
+
+    if [[ -n "${RING_REPORT_FILE:-}" ]]; then
+      ARGS+=("--ring-report-file=${RING_REPORT_FILE}")
+    fi
+
     if [[ -n "${LOG_FILE:-}" ]]; then
       ARGS+=("--log-file=${LOG_FILE}")
     fi
 
-    exec /usr/local/bin/env-detector "${ARGS[@]}"
+    # Run env-detector with --json to capture structured output for GitHub Actions
+    if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+      # Capture JSON output
+      JSON_OUTPUT=$(/usr/local/bin/env-detector "${ARGS[@]}" --json)
+      EXIT_CODE=$?
+
+      # Parse JSON and write to GITHUB_OUTPUT
+      echo "affected-environments=$(echo "$JSON_OUTPUT" | jq -c '.affected_environments')" >> "$GITHUB_OUTPUT"
+      echo "affected-clusters=$(echo "$JSON_OUTPUT" | jq -c '.affected_clusters')" >> "$GITHUB_OUTPUT"
+      echo "labels=$(echo "$JSON_OUTPUT" | jq -c '.labels')" >> "$GITHUB_OUTPUT"
+
+      # Also print human-readable output for logs
+      /usr/local/bin/env-detector "${ARGS[@]}"
+
+      exit $EXIT_CODE
+    else
+      # No GITHUB_OUTPUT, just run normally
+      exec /usr/local/bin/env-detector "${ARGS[@]}"
+    fi
     ;;
 
   render-diff)
@@ -49,6 +75,10 @@ case "$COMMAND" in
 
     if [[ -n "${BASE_REF:-}" ]]; then
       ARGS+=("--base-ref=${BASE_REF}")
+    fi
+
+    if [[ -n "${OVERLAYS_DIR:-}" ]]; then
+      ARGS+=("--overlays-dir=${OVERLAYS_DIR}")
     fi
 
     if [[ -n "${OUTPUT_MODE:-}" ]]; then

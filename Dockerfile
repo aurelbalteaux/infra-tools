@@ -21,7 +21,7 @@ RUN CGO_ENABLED=0 go build -o /usr/local/bin/env-detector ./cmd/env-detector && 
 # Final image
 FROM alpine:3.21
 
-RUN apk add --no-cache git bash
+RUN apk add --no-cache git bash jq
 
 # Copy binaries from builder
 COPY --from=builder /usr/local/bin/env-detector /usr/local/bin/env-detector
