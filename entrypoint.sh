@@ -49,19 +49,37 @@ case "$COMMAND" in
       ARGS+=("--log-file=${LOG_FILE}")
     fi
 
-    # Run env-detector with --json to capture structured output for GitHub Actions
+    # Run env-detector once and capture JSON output if needed
     if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
-      # Capture JSON output
-      JSON_OUTPUT=$(/usr/local/bin/env-detector "${ARGS[@]}" --json)
+      # Run with --json to get structured output
+      JSON_OUTPUT=$(/usr/local/bin/env-detector "${ARGS[@]}" --json 2>&1)
       EXIT_CODE=$?
 
-      # Parse JSON and write to GITHUB_OUTPUT
-      echo "affected-environments=$(echo "$JSON_OUTPUT" | jq -c '.affected_environments')" >> "$GITHUB_OUTPUT"
-      echo "affected-clusters=$(echo "$JSON_OUTPUT" | jq -c '.affected_clusters')" >> "$GITHUB_OUTPUT"
-      echo "labels=$(echo "$JSON_OUTPUT" | jq -c '.labels')" >> "$GITHUB_OUTPUT"
+      # Validate exit code
+      if [[ $EXIT_CODE -ne 0 ]]; then
+        echo "Error: env-detector failed with exit code $EXIT_CODE" >&2
+        echo "$JSON_OUTPUT" >&2
+        exit $EXIT_CODE
+      fi
 
-      # Also print human-readable output for logs
-      /usr/local/bin/env-detector "${ARGS[@]}"
+      # Extract JSON portion (everything from first '{' to last '}')
+      # This handles multi-line JSON after INFO logs
+      JSON_PORTION=$(echo "$JSON_OUTPUT" | sed -n '/{/,/}/p')
+
+      # Validate JSON
+      if ! echo "$JSON_PORTION" | jq empty 2>/dev/null; then
+        echo "Error: env-detector did not produce valid JSON" >&2
+        echo "$JSON_OUTPUT" >&2
+        exit 1
+      fi
+
+      # Parse and write to GITHUB_OUTPUT (use compact format)
+      echo "affected-environments=$(echo "$JSON_PORTION" | jq -c '.affected_environments')" >> "$GITHUB_OUTPUT"
+      echo "affected-clusters=$(echo "$JSON_PORTION" | jq -c '.affected_clusters')" >> "$GITHUB_OUTPUT"
+      echo "labels=$(echo "$JSON_PORTION" | jq -c '.labels')" >> "$GITHUB_OUTPUT"
+
+      # Print the full output (including logs) to stdout for GitHub Actions logs
+      echo "$JSON_OUTPUT"
 
       exit $EXIT_CODE
     else
