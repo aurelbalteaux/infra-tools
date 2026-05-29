@@ -1,0 +1,78 @@
+name: 'Infra Tools'
+description: 'Environment detection and kustomize diff rendering for infra-deployments PRs'
+author: 'konflux-infra'
+
+inputs:
+  command:
+    description: 'Command to run: env-detector or render-diff'
+    required: true
+  repo-root:
+    description: 'Path to the repository root (default: auto-detect)'
+    required: false
+    default: '.'
+  base-ref:
+    description: 'Base git ref to compare against'
+    required: false
+  pr-number:
+    description: 'Pull request number (for labeling/commenting)'
+    required: false
+  github-token:
+    description: 'GitHub token for API operations'
+    required: false
+    default: ${{ github.token }}
+  overlays-dir:
+    description: 'Path to overlays directory relative to repo root'
+    required: false
+    default: 'argo-cd-apps/overlays'
+  output-mode:
+    description: 'Output mode for render-diff: local, ci-summary, ci-comment, ci-artifact-dir (comma-separated)'
+    required: false
+    default: 'local'
+  output-dir:
+    description: 'Output directory for render-diff artifacts'
+    required: false
+  log-file:
+    description: 'Write debug logs to this file'
+    required: false
+  cluster-labels:
+    description: 'Include cluster/<name> labels (env-detector)'
+    required: false
+    default: 'false'
+  dry-run:
+    description: 'Print results without calling GitHub API (env-detector)'
+    required: false
+    default: 'false'
+
+outputs:
+  affected-environments:
+    description: 'JSON array of affected environment names (env-detector)'
+    value: ${{ steps.run.outputs.affected-environments }}
+  affected-clusters:
+    description: 'JSON array of affected cluster names (env-detector)'
+    value: ${{ steps.run.outputs.affected-clusters }}
+  diff-summary:
+    description: 'Summary of render differences (render-diff)'
+    value: ${{ steps.run.outputs.diff-summary }}
+
+runs:
+  using: 'docker'
+  image: 'docker://quay.io/aurelbalteaux/infra-tools:latest'
+  env:
+    COMMAND: ${{ inputs.command }}
+    REPO_ROOT: ${{ inputs.repo-root }}
+    BASE_REF: ${{ inputs.base-ref }}
+    PR_NUMBER: ${{ inputs.pr-number }}
+    GITHUB_TOKEN: ${{ inputs.github-token }}
+    GITHUB_REPOSITORY: ${{ github.repository }}
+    OVERLAYS_DIR: ${{ inputs.overlays-dir }}
+    OUTPUT_MODE: ${{ inputs.output-mode }}
+    OUTPUT_DIR: ${{ inputs.output-dir }}
+    LOG_FILE: ${{ inputs.log-file }}
+    CLUSTER_LABELS: ${{ inputs.cluster-labels }}
+    DRY_RUN: ${{ inputs.dry-run }}
+    GITHUB_SERVER_URL: ${{ github.server_url }}
+    GITHUB_RUN_ID: ${{ github.run_id }}
+
+branding:
+  icon: 'git-pull-request'
+  color: 'blue'

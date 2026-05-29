@@ -63,6 +63,21 @@ build: fmt vet ## Build all binaries.
 clean: ## Remove build artifacts.
 	rm -rf $(LOCALBIN) cover.out
 
+##@ Container
+
+# Detect container engine
+CONTAINER_ENGINE ?= $(shell command -v podman 2>/dev/null || command -v docker 2>/dev/null)
+IMAGE_NAME ?= quay.io/aurelbalteaux/infra-tools
+IMAGE_TAG ?= latest
+
+.PHONY: image
+image: ## Build container image.
+	$(CONTAINER_ENGINE) build -t $(IMAGE_NAME):$(IMAGE_TAG) .
+
+.PHONY: image-push
+image-push: ## Push container image.
+	$(CONTAINER_ENGINE) push $(IMAGE_NAME):$(IMAGE_TAG)
+
 ##@ Dependencies
 
 .PHONY: golangci-lint
