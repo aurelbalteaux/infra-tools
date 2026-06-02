@@ -1,10 +1,11 @@
-package ci
+package ci_test
 
 import (
 	"context"
-	"os"
 	"strings"
 	"testing"
+
+	"github.com/aurelbalteaux/infra-tools/internal/ci"
 )
 
 func TestBuildRunURL(t *testing.T) {
@@ -54,22 +55,12 @@ func TestBuildRunURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Save original env vars
-			origServer := os.Getenv("GITHUB_SERVER_URL")
-			origRepo := os.Getenv("GITHUB_REPOSITORY")
-			origRun := os.Getenv("GITHUB_RUN_ID")
-			defer func() {
-				os.Setenv("GITHUB_SERVER_URL", origServer)
-				os.Setenv("GITHUB_REPOSITORY", origRepo)
-				os.Setenv("GITHUB_RUN_ID", origRun)
-			}()
-
 			// Set test env vars
-			os.Setenv("GITHUB_SERVER_URL", tt.serverURL)
-			os.Setenv("GITHUB_REPOSITORY", tt.repo)
-			os.Setenv("GITHUB_RUN_ID", tt.runID)
+			t.Setenv("GITHUB_SERVER_URL", tt.serverURL)
+			t.Setenv("GITHUB_REPOSITORY", tt.repo)
+			t.Setenv("GITHUB_RUN_ID", tt.runID)
 
-			got := BuildRunURL()
+			got := ci.BuildRunURL()
 			if got != tt.want {
 				t.Errorf("BuildRunURL() = %q, want %q", got, tt.want)
 			}
@@ -78,20 +69,10 @@ func TestBuildRunURL(t *testing.T) {
 }
 
 func TestPostPRComment_MissingEnvVars(t *testing.T) {
-	// Save original env vars
-	origToken := os.Getenv("GITHUB_TOKEN")
-	origRepo := os.Getenv("GITHUB_REPOSITORY")
-	origPR := os.Getenv("PR_NUMBER")
-	defer func() {
-		os.Setenv("GITHUB_TOKEN", origToken)
-		os.Setenv("GITHUB_REPOSITORY", origRepo)
-		os.Setenv("PR_NUMBER", origPR)
-	}()
-
 	// Clear env vars to trigger fallback
-	os.Unsetenv("GITHUB_TOKEN")
-	os.Unsetenv("GITHUB_REPOSITORY")
-	os.Unsetenv("PR_NUMBER")
+	t.Setenv("GITHUB_TOKEN", "")
+	t.Setenv("GITHUB_REPOSITORY", "")
+	t.Setenv("PR_NUMBER", "")
 
 	bodyBuilderCalled := false
 	buildBody := func(runURL string) string {
@@ -100,7 +81,7 @@ func TestPostPRComment_MissingEnvVars(t *testing.T) {
 	}
 
 	// This should not return an error, but fall back to printing
-	err := PostPRComment(context.Background(), "<!-- test-marker -->", buildBody)
+	err := ci.PostPRComment(context.Background(), "<!-- test-marker -->", buildBody)
 	if err != nil {
 		t.Errorf("PostPRComment() unexpected error: %v", err)
 	}
@@ -111,16 +92,6 @@ func TestPostPRComment_MissingEnvVars(t *testing.T) {
 }
 
 func TestPostPRComment_InvalidPRNumber(t *testing.T) {
-	// Save original env vars
-	origToken := os.Getenv("GITHUB_TOKEN")
-	origRepo := os.Getenv("GITHUB_REPOSITORY")
-	origPR := os.Getenv("PR_NUMBER")
-	defer func() {
-		os.Setenv("GITHUB_TOKEN", origToken)
-		os.Setenv("GITHUB_REPOSITORY", origRepo)
-		os.Setenv("PR_NUMBER", origPR)
-	}()
-
 	tests := []struct {
 		name     string
 		prNumber string
@@ -145,15 +116,15 @@ func TestPostPRComment_InvalidPRNumber(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			os.Setenv("GITHUB_TOKEN", "fake-token")
-			os.Setenv("GITHUB_REPOSITORY", "owner/repo")
-			os.Setenv("PR_NUMBER", tt.prNumber)
+			t.Setenv("GITHUB_TOKEN", "fake-token")
+			t.Setenv("GITHUB_REPOSITORY", "owner/repo")
+			t.Setenv("PR_NUMBER", tt.prNumber)
 
 			buildBody := func(runURL string) string {
 				return "test comment"
 			}
 
-			err := PostPRComment(context.Background(), "<!-- test -->", buildBody)
+			err := ci.PostPRComment(context.Background(), "<!-- test -->", buildBody)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("PostPRComment() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -167,25 +138,11 @@ func TestPostPRComment_InvalidPRNumber(t *testing.T) {
 }
 
 func TestPostPRComment_BuildBodyCallback(t *testing.T) {
-	// Save original env vars
-	origToken := os.Getenv("GITHUB_TOKEN")
-	origRepo := os.Getenv("GITHUB_REPOSITORY")
-	origPR := os.Getenv("PR_NUMBER")
-	origServer := os.Getenv("GITHUB_SERVER_URL")
-	origRunID := os.Getenv("GITHUB_RUN_ID")
-	defer func() {
-		os.Setenv("GITHUB_TOKEN", origToken)
-		os.Setenv("GITHUB_REPOSITORY", origRepo)
-		os.Setenv("PR_NUMBER", origPR)
-		os.Setenv("GITHUB_SERVER_URL", origServer)
-		os.Setenv("GITHUB_RUN_ID", origRunID)
-	}()
-
 	// Clear env vars to trigger fallback (won't actually post)
-	os.Unsetenv("GITHUB_TOKEN")
-	os.Setenv("GITHUB_SERVER_URL", "https://github.com")
-	os.Setenv("GITHUB_REPOSITORY", "owner/repo")
-	os.Setenv("GITHUB_RUN_ID", "12345")
+	t.Setenv("GITHUB_TOKEN", "")
+	t.Setenv("GITHUB_SERVER_URL", "https://github.com")
+	t.Setenv("GITHUB_REPOSITORY", "owner/repo")
+	t.Setenv("GITHUB_RUN_ID", "12345")
 
 	var receivedURL string
 	buildBody := func(runURL string) string {
@@ -193,7 +150,7 @@ func TestPostPRComment_BuildBodyCallback(t *testing.T) {
 		return "test body"
 	}
 
-	_ = PostPRComment(context.Background(), "<!-- test -->", buildBody)
+	_ = ci.PostPRComment(context.Background(), "<!-- test -->", buildBody)
 
 	expectedURL := "https://github.com/owner/repo/actions/runs/12345"
 	if receivedURL != expectedURL {
