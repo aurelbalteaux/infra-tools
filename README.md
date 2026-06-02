@@ -28,6 +28,16 @@ This repository can be consumed as a GitHub Action in workflows:
     output-mode: ci-summary,ci-comment
 ```
 
+### Reference Validation (validate-refs)
+
+```yaml
+- uses: aurelbalteaux/infra-tools@main
+  with:
+    command: validate-refs
+    root: .
+    verbose: 'true'
+```
+
 See [action.yml](./action.yml) for all available inputs and outputs.
 
 ## Usage as Standalone CLI
@@ -85,7 +95,13 @@ DIFFTOOL=meld ./bin/render-diff --open
 
 # Explicit base ref
 ./bin/render-diff --base-ref origin/main
+
+# Detection modes (choose based on repository structure)
+./bin/render-diff --detection-mode appset  # For repos using ArgoCD ApplicationSets (default)
+./bin/render-diff --detection-mode direct --components-dir components  # For flat component directories
 ```
+
+See [docs/direct-mode.md](./docs/direct-mode.md) for details on direct mode.
 
 Key flags:
 - `--base-ref` — git ref to compare against (default: merge-base with `main`)
@@ -123,6 +139,25 @@ rather than CLI flags, so these details are not exposed to local users:
 If any of these are missing, `ci-comment` falls back to printing the comment
 markdown to stdout.
 
+### validate-refs
+
+Validates that all YAML files in a directory tree are properly referenced
+in their parent kustomization.yaml files. Used in CI to catch orphaned
+configuration files.
+
+```bash
+# Validate current directory
+./bin/validate-refs --root .
+
+# Verbose output showing all checked directories
+./bin/validate-refs --root . --verbose
+
+# CI mode with PR comment
+./bin/validate-refs --root . --output-mode ci-comment
+```
+
+See [docs/validate-refs.md](./docs/validate-refs.md) for full documentation.
+
 ## Project structure
 
 ```
@@ -130,13 +165,17 @@ infra-tools/
   cmd/
     env-detector/        CLI entry point for env-detector
     render-diff/         CLI entry point for render-diff
+    validate-refs/       CLI entry point for validate-refs
   internal/
     appset/              ArgoCD ApplicationSet YAML parser
+    ci/                  GitHub Actions CI utilities
     deptree/             Kustomize dependency tree resolver
     detector/            Core detection logic (overlay building, file matching)
+    directpath/          Direct path-based detection (flat component directories)
     git/                 Git operations (diff, worktree, merge-base)
     github/              GitHub API client (PR labels, PR comments)
     kustomize/           Kustomize build wrapper
+    logging/             Logging setup
     renderdiff/          Render diff engine (parallel builds, unified diffs, YAML normalization)
   Makefile               Build, test, lint targets
 ```
