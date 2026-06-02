@@ -9,9 +9,11 @@ import (
 	gh "github.com/google/go-github/v68/github"
 )
 
-// CommentMarker is the HTML comment used to identify render-diff PR comments
-// for idempotent updates.
-const CommentMarker = "<!-- render-diff-comment -->"
+// Comment markers used to identify PR comments for idempotent updates.
+const (
+	RenderDiffCommentMarker   = "<!-- render-diff-comment -->"
+	ValidateRefsCommentMarker = "<!-- validate-refs-comment -->"
+)
 
 // IssueCommentsService is the subset of the GitHub Issues API used for comments.
 type IssueCommentsService interface {
@@ -25,10 +27,11 @@ type CommentClient struct {
 	comments IssueCommentsService
 	owner    string
 	repo     string
+	marker   string
 }
 
-// NewCommentClient creates a new comment client from a token and "owner/repo" string.
-func NewCommentClient(token, repoFullName string) (*CommentClient, error) {
+// NewCommentClient creates a new comment client from a token, "owner/repo" string, and comment marker.
+func NewCommentClient(token, repoFullName, marker string) (*CommentClient, error) {
 	parts := strings.SplitN(repoFullName, "/", 2)
 	if len(parts) != 2 {
 		return nil, fmt.Errorf("invalid repo format %q, expected owner/repo", repoFullName)
@@ -38,6 +41,7 @@ func NewCommentClient(token, repoFullName string) (*CommentClient, error) {
 		comments: client.Issues,
 		owner:    parts[0],
 		repo:     parts[1],
+		marker:   marker,
 	}, nil
 }
 
@@ -51,7 +55,7 @@ func (c *CommentClient) UpsertComment(ctx context.Context, prNumber int, body st
 	}
 
 	if existingID != 0 {
-		slog.Info("Updating existing render-diff comment", "comment_id", existingID)
+		slog.Info("Updating existing PR comment", "comment_id", existingID)
 		_, _, err = c.comments.EditComment(ctx, c.owner, c.repo, existingID, &gh.IssueComment{
 			Body: gh.Ptr(body),
 		})
@@ -61,7 +65,7 @@ func (c *CommentClient) UpsertComment(ctx context.Context, prNumber int, body st
 		return nil
 	}
 
-	slog.Info("Creating new render-diff comment")
+	slog.Info("Creating new PR comment")
 	_, _, err = c.comments.CreateComment(ctx, c.owner, c.repo, prNumber, &gh.IssueComment{
 		Body: gh.Ptr(body),
 	})
@@ -71,7 +75,7 @@ func (c *CommentClient) UpsertComment(ctx context.Context, prNumber int, body st
 	return nil
 }
 
-// findMarkedComment searches for a comment containing the CommentMarker.
+// findMarkedComment searches for a comment containing the marker.
 func (c *CommentClient) findMarkedComment(ctx context.Context, prNumber int) (int64, error) {
 	opts := &gh.IssueListCommentsOptions{
 		ListOptions: gh.ListOptions{PerPage: 100},
@@ -82,7 +86,7 @@ func (c *CommentClient) findMarkedComment(ctx context.Context, prNumber int) (in
 			return 0, err
 		}
 		for _, comment := range comments {
-			if comment.Body != nil && strings.Contains(*comment.Body, CommentMarker) {
+			if comment.Body != nil && strings.Contains(*comment.Body, c.marker) {
 				return comment.GetID(), nil
 			}
 		}

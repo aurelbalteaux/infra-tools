@@ -49,9 +49,9 @@ func TestUpsertComment_CreatesNew(t *testing.T) {
 	g := NewWithT(t)
 
 	fake := newFakeCommentsService()
-	client := &CommentClient{comments: fake, owner: "org", repo: "repo"}
+	client := &CommentClient{comments: fake, owner: "org", repo: "repo", marker: RenderDiffCommentMarker}
 
-	body := CommentMarker + "\n### Test\nHello"
+	body := RenderDiffCommentMarker + "\n### Test\nHello"
 	err := client.UpsertComment(context.Background(), 42, body)
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(fake.created).To(HaveLen(1))
@@ -64,12 +64,12 @@ func TestUpsertComment_UpdatesExisting(t *testing.T) {
 	fake := newFakeCommentsService()
 	// Pre-existing comment with the marker
 	fake.comments = []*gh.IssueComment{
-		{ID: gh.Ptr(int64(99)), Body: gh.Ptr(CommentMarker + "\nold content")},
+		{ID: gh.Ptr(int64(99)), Body: gh.Ptr(RenderDiffCommentMarker + "\nold content")},
 	}
 
-	client := &CommentClient{comments: fake, owner: "org", repo: "repo"}
+	client := &CommentClient{comments: fake, owner: "org", repo: "repo", marker: RenderDiffCommentMarker}
 
-	body := CommentMarker + "\n### Updated\nNew content"
+	body := RenderDiffCommentMarker + "\n### Updated\nNew content"
 	err := client.UpsertComment(context.Background(), 42, body)
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(fake.created).To(BeEmpty()) // no new comment created
@@ -86,9 +86,9 @@ func TestUpsertComment_IgnoresUnrelatedComments(t *testing.T) {
 		{ID: gh.Ptr(int64(2)), Body: gh.Ptr("another comment")},
 	}
 
-	client := &CommentClient{comments: fake, owner: "org", repo: "repo"}
+	client := &CommentClient{comments: fake, owner: "org", repo: "repo", marker: RenderDiffCommentMarker}
 
-	body := CommentMarker + "\nnew"
+	body := RenderDiffCommentMarker + "\nnew"
 	err := client.UpsertComment(context.Background(), 42, body)
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(fake.created).To(HaveLen(1)) // created new, didn't update existing
