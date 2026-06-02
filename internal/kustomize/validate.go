@@ -106,6 +106,21 @@ func validateDirectory(rootDir, dir string) ([]OrphanedFile, error) {
 		referenced[normalizeResourcePath(component)] = true
 	}
 
+	// Bases (deprecated, but still used)
+	for _, base := range kustomization.Bases {
+		referenced[normalizeResourcePath(base)] = true
+	}
+
+	// CRDs
+	for _, crd := range kustomization.Crds {
+		referenced[normalizeResourcePath(crd)] = true
+	}
+
+	// Configurations
+	for _, config := range kustomization.Configurations {
+		referenced[normalizeResourcePath(config)] = true
+	}
+
 	// Find all YAML files in the directory
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -132,8 +147,14 @@ func validateDirectory(rootDir, dir string) ([]OrphanedFile, error) {
 
 		// Check if this file is referenced
 		if !referenced[name] {
-			relPath, _ := filepath.Rel(rootDir, filepath.Join(dir, name))
-			relDir, _ := filepath.Rel(rootDir, dir)
+			relPath, err := filepath.Rel(rootDir, filepath.Join(dir, name))
+			if err != nil {
+				relPath = filepath.Join(dir, name)
+			}
+			relDir, err := filepath.Rel(rootDir, dir)
+			if err != nil {
+				relDir = dir
+			}
 			orphaned = append(orphaned, OrphanedFile{
 				Path:         relPath,
 				KustomizeDir: relDir,
@@ -175,13 +196,14 @@ func normalizeResourcePath(path string) string {
 		return path
 	}
 
-	// If it's a directory reference, keep as is
-	if strings.HasPrefix(path, "../") || strings.HasPrefix(path, "./") {
+	// Directory references (parent/relative/subdir) should not match local files
+	// Keep full path to avoid false matches with local basenames
+	if strings.Contains(path, "/") {
 		return path
 	}
 
-	// For local files, just use the filename
-	return filepath.Base(path)
+	// Local files in same directory - no change needed
+	return path
 }
 
 // fileExists checks if a file exists
