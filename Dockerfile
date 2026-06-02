@@ -16,7 +16,8 @@ COPY internal/ internal/
 
 # Build binaries
 RUN CGO_ENABLED=0 go build -o /usr/local/bin/env-detector ./cmd/env-detector && \
-    CGO_ENABLED=0 go build -o /usr/local/bin/render-diff ./cmd/render-diff
+    CGO_ENABLED=0 go build -o /usr/local/bin/render-diff ./cmd/render-diff && \
+    CGO_ENABLED=0 go build -o /usr/local/bin/validate-refs ./cmd/validate-refs
 
 # Final image
 FROM alpine:3.21
@@ -26,6 +27,7 @@ RUN apk add --no-cache git bash jq
 # Copy binaries from builder
 COPY --from=builder /usr/local/bin/env-detector /usr/local/bin/env-detector
 COPY --from=builder /usr/local/bin/render-diff /usr/local/bin/render-diff
+COPY --from=builder /usr/local/bin/validate-refs /usr/local/bin/validate-refs
 COPY --from=builder /go/bin/kustomize /usr/local/bin/kustomize
 
 # Copy entrypoint

@@ -99,6 +99,14 @@ case "$COMMAND" in
       ARGS+=("--overlays-dir=${OVERLAYS_DIR}")
     fi
 
+    if [[ -n "${DETECTION_MODE:-}" ]]; then
+      ARGS+=("--detection-mode=${DETECTION_MODE}")
+    fi
+
+    if [[ -n "${COMPONENTS_DIR:-}" ]]; then
+      ARGS+=("--components-dir=${COMPONENTS_DIR}")
+    fi
+
     if [[ -n "${OUTPUT_MODE:-}" ]]; then
       ARGS+=("--output-mode=${OUTPUT_MODE}")
     fi
@@ -114,8 +122,32 @@ case "$COMMAND" in
     exec /usr/local/bin/render-diff "${ARGS[@]}"
     ;;
 
+  validate-refs)
+    ARGS=()
+
+    if [[ -n "${ROOT:-}" ]]; then
+      ARGS+=("--root=${ROOT}")
+    else
+      ARGS+=("--root=${REPO_ROOT}")
+    fi
+
+    if [[ "${VERBOSE:-false}" == "true" ]]; then
+      ARGS+=("--verbose")
+    fi
+
+    if [[ -n "${OUTPUT_MODE:-}" ]]; then
+      ARGS+=("--output-mode=${OUTPUT_MODE}")
+    fi
+
+    if [[ -n "${LOG_FILE:-}" ]]; then
+      ARGS+=("--log-file=${LOG_FILE}")
+    fi
+
+    exec /usr/local/bin/validate-refs "${ARGS[@]}"
+    ;;
+
   *)
-    echo "Error: unknown command '${COMMAND}'. Must be 'env-detector' or 'render-diff'." >&2
+    echo "Error: unknown command '${COMMAND}'. Must be 'env-detector', 'render-diff', or 'validate-refs'." >&2
     exit 1
     ;;
 esac

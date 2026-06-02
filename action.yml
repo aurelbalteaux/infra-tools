@@ -1,10 +1,10 @@
 name: 'Infra Tools'
-description: 'Environment detection and kustomize diff rendering for infra-deployments PRs'
+description: 'Environment detection, kustomize diff rendering, and reference validation for infra-deployments PRs'
 author: 'konflux-infra'
 
 inputs:
   command:
-    description: 'Command to run: env-detector or render-diff'
+    description: 'Command to run: env-detector, render-diff, or validate-refs'
     required: true
   repo-root:
     description: 'Path to the repository root (default: auto-detect)'
@@ -49,6 +49,23 @@ inputs:
   ring-report-file:
     description: 'Write ring deployment check result to this file (env-detector)'
     required: false
+  # validate-refs specific inputs
+  root:
+    description: 'Root directory to validate (validate-refs)'
+    required: false
+  verbose:
+    description: 'Show all checked directories (validate-refs)'
+    required: false
+    default: 'false'
+  # render-diff specific inputs
+  detection-mode:
+    description: 'Detection mode for render-diff: appset or direct'
+    required: false
+    default: 'appset'
+  components-dir:
+    description: 'Components directory for direct mode (render-diff)'
+    required: false
+    default: 'components'
 
 outputs:
   affected-environments:
@@ -76,6 +93,10 @@ runs:
     DRY_RUN: ${{ inputs.dry-run }}
     ENFORCE_RING_DEPLOYMENT: ${{ inputs.enforce-ring-deployment }}
     RING_REPORT_FILE: ${{ inputs.ring-report-file }}
+    ROOT: ${{ inputs.root }}
+    VERBOSE: ${{ inputs.verbose }}
+    DETECTION_MODE: ${{ inputs.detection-mode }}
+    COMPONENTS_DIR: ${{ inputs.components-dir }}
     GITHUB_SERVER_URL: ${{ github.server_url }}
     GITHUB_RUN_ID: ${{ github.run_id }}
     GITHUB_STEP_SUMMARY: ${{ env.GITHUB_STEP_SUMMARY }}
