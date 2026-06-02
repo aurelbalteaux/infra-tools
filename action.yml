@@ -32,7 +32,7 @@ inputs:
     description: 'Output directory for render-diff artifacts'
     required: false
   log-file:
-    description: 'Write debug logs to this file'
+    description: 'Write debug logs to this file (env-detector, render-diff only)'
     required: false
   cluster-labels:
     description: 'Include cluster/<name> labels (env-detector)'

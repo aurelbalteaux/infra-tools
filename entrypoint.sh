@@ -135,14 +135,6 @@ case "$COMMAND" in
       ARGS+=("--verbose")
     fi
 
-    if [[ -n "${OUTPUT_MODE:-}" ]]; then
-      ARGS+=("--output-mode=${OUTPUT_MODE}")
-    fi
-
-    if [[ -n "${LOG_FILE:-}" ]]; then
-      ARGS+=("--log-file=${LOG_FILE}")
-    fi
-
     exec /usr/local/bin/validate-refs "${ARGS[@]}"
     ;;
 
