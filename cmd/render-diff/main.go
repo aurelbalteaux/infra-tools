@@ -12,7 +12,9 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/aurelbalteaux/infra-tools/internal/appset"
 	"github.com/aurelbalteaux/infra-tools/internal/detector"
+	"github.com/aurelbalteaux/infra-tools/internal/directpath"
 	"github.com/aurelbalteaux/infra-tools/internal/git"
 	"github.com/aurelbalteaux/infra-tools/internal/logging"
 	"github.com/aurelbalteaux/infra-tools/internal/renderdiff"
@@ -23,15 +25,17 @@ var version = "dev"
 
 func main() {
 	var (
-		repoRoot    = flag.String("repo-root", "", "Path to the repository root (default: auto-detect via git)")
-		baseRef     = flag.String("base-ref", "", "Base git ref to compare against (default: merge-base with main)")
-		overlaysDir = flag.String("overlays-dir", "argo-cd-apps/overlays", "Path to overlays directory relative to repo root")
-		color       = flag.String("color", "auto", "Color output: auto, always, never")
-		openDiff    = flag.Bool("open", false, "Open diffs in $DIFFTOOL or git difftool")
-		outputDir   = flag.String("output-dir", "", "Write per-component .diff files to this directory")
-		outputMode  = flag.String("output-mode", "local", "Output mode: local, ci-summary, ci-comment, ci-artifact-dir")
-		showVersion = flag.Bool("version", false, "Print version and exit")
-		logFile     = flag.String("log-file", "", "Write debug-level logs to this file")
+		repoRoot      = flag.String("repo-root", "", "Path to the repository root (default: auto-detect via git)")
+		baseRef       = flag.String("base-ref", "", "Base git ref to compare against (default: merge-base with main)")
+		overlaysDir   = flag.String("overlays-dir", "argo-cd-apps/overlays", "Path to overlays directory relative to repo root")
+		detectionMode = flag.String("detection-mode", "appset", "Component detection mode: appset (ArgoCD ApplicationSets), direct (find kustomization dirs)")
+		componentsDir = flag.String("components-dir", "components", "Path to components directory for direct mode (relative to repo root)")
+		color         = flag.String("color", "auto", "Color output: auto, always, never")
+		openDiff      = flag.Bool("open", false, "Open diffs in $DIFFTOOL or git difftool")
+		outputDir     = flag.String("output-dir", "", "Write per-component .diff files to this directory")
+		outputMode    = flag.String("output-mode", "local", "Output mode: local, ci-summary, ci-comment, ci-artifact-dir")
+		showVersion   = flag.Bool("version", false, "Print version and exit")
+		logFile       = flag.String("log-file", "", "Write debug-level logs to this file")
 	)
 	flag.Parse()
 
@@ -52,6 +56,14 @@ func main() {
 		// valid
 	default:
 		fmt.Fprintf(os.Stderr, "invalid --color %q: must be one of auto, always, never\n", *color)
+		os.Exit(1)
+	}
+
+	switch *detectionMode {
+	case "appset", "direct":
+		// valid
+	default:
+		fmt.Fprintf(os.Stderr, "invalid --detection-mode %q: must be one of appset, direct\n", *detectionMode)
 		os.Exit(1)
 	}
 
@@ -127,14 +139,28 @@ func main() {
 	baseRefRepo := detector.NewRepoRef(worktreePath)
 
 	// Step 3: Detect affected components
-	slog.Info("Detecting affected components...")
-	d, err := detector.NewDetector(headRef, baseRefRepo, *overlaysDir)
-	if err != nil {
-		logging.Fatal("initializing detector", "err", err)
-	}
-	affected, err := d.AffectedComponents(changedFiles)
-	if err != nil {
-		logging.Fatal("detecting affected components", "err", err)
+	slog.Info("Detecting affected components...", "mode", *detectionMode)
+	var affected map[detector.Environment][]appset.ComponentPath
+
+	switch *detectionMode {
+	case "appset":
+		// Use ArgoCD ApplicationSet-based detection
+		d, err := detector.NewDetector(headRef, baseRefRepo, *overlaysDir)
+		if err != nil {
+			logging.Fatal("initializing detector", "err", err)
+		}
+		affected, err = d.AffectedComponents(changedFiles)
+		if err != nil {
+			logging.Fatal("detecting affected components", "err", err)
+		}
+
+	case "direct":
+		// Use direct path-based detection
+		det := directpath.NewDetector(headRef, *componentsDir, nil)
+		affected, err = det.AffectedComponents(changedFiles)
+		if err != nil {
+			logging.Fatal("detecting affected components", "err", err)
+		}
 	}
 
 	// Count total jobs
