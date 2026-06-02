@@ -109,6 +109,8 @@ Key flags:
 - `--open` — open diffs in `$DIFFTOOL` or `git difftool` (directory comparison mode)
 - `--output-dir` — write per-component `.diff` files to a directory
 - `--output-mode` — output format (comma-separated): `local` (default), `ci-summary`, `ci-comment`, `ci-artifact-dir`
+- `--detection-mode` — component detection mode: `appset` (default), `direct`
+- `--components-dir` — path to components directory for direct mode (default: `components`)
 - `--log-file` — write debug logs to a file
 - `--version` — print version and exit
 
@@ -180,8 +182,8 @@ infra-tools/
   Makefile               Build, test, lint targets
 ```
 
-The `internal/` packages are shared between both tools. The `detector` package
-provides the detection pipeline that both tools build on: it constructs
+The `internal/` packages are shared between these tools. The `detector` package
+provides the detection pipeline that these tools build on: it constructs
 ApplicationSet overlays, resolves kustomize dependency trees, and matches
 changed files to affected components.
 
