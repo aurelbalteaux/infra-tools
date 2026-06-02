@@ -13,7 +13,10 @@ import (
 	"github.com/aurelbalteaux/infra-tools/internal/detector"
 )
 
-// RepoQuerier matches the interface used by the detector package.
+// RepoQuerier provides access to repository file system operations
+// for path-based detection. This is a minimal interface for simple
+// directory traversal, distinct from detector.RepoQuerier which handles
+// kustomization builds.
 type RepoQuerier interface {
 	Root() string
 	DirExists(rel string) bool
@@ -31,6 +34,13 @@ type Detector struct {
 // componentsDir is the base directory to search (e.g., "components").
 // environmentMap maps directory names to environments (e.g., "staging" -> Staging).
 func NewDetector(head RepoQuerier, componentsDir string, environmentMap map[string]detector.Environment) *Detector {
+	if head == nil {
+		panic("directpath.NewDetector: head cannot be nil")
+	}
+	if componentsDir == "" {
+		panic("directpath.NewDetector: componentsDir cannot be empty")
+	}
+
 	if environmentMap == nil {
 		// Default environment mapping for internal-infra-deployments structure
 		environmentMap = map[string]detector.Environment{
