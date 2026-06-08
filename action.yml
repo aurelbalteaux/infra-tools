@@ -84,7 +84,6 @@ runs:
     BASE_REF: ${{ inputs.base-ref }}
     PR_NUMBER: ${{ inputs.pr-number }}
     GITHUB_TOKEN: ${{ inputs.github-token }}
-    GITHUB_REPOSITORY: ${{ github.repository }}
     OVERLAYS_DIR: ${{ inputs.overlays-dir }}
     OUTPUT_MODE: ${{ inputs.output-mode }}
     OUTPUT_DIR: ${{ inputs.output-dir }}
@@ -97,9 +96,6 @@ runs:
     VERBOSE: ${{ inputs.verbose }}
     DETECTION_MODE: ${{ inputs.detection-mode }}
     COMPONENTS_DIR: ${{ inputs.components-dir }}
-    GITHUB_SERVER_URL: ${{ github.server_url }}
-    GITHUB_RUN_ID: ${{ github.run_id }}
-    GITHUB_STEP_SUMMARY: ${{ env.GITHUB_STEP_SUMMARY }}
 
 branding:
   icon: 'git-pull-request'
