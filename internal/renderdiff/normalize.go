@@ -2,6 +2,7 @@ package renderdiff
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"log/slog"
 	"sort"
@@ -36,7 +37,7 @@ func normalizeYAML(input []byte) []byte {
 	for {
 		var node yaml.Node
 		err := decoder.Decode(&node)
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {

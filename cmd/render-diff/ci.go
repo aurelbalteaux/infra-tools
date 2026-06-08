@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -45,7 +46,7 @@ func runOutputMode(ctx context.Context, mode OutputMode, result *renderdiff.Diff
 		}
 	case OutputModeCIArtifact:
 		if outputDir == "" {
-			return fmt.Errorf("--output-dir is required for ci-artifact-dir mode")
+			return errors.New("--output-dir is required for ci-artifact-dir mode")
 		}
 		if err := writeDiffFiles(result, outputDir); err != nil {
 			return fmt.Errorf("writing artifact diff files: %w", err)

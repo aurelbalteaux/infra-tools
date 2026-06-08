@@ -24,7 +24,7 @@ func writeDiffFiles(result *renderdiff.DiffResult, dir string) error {
 		}
 		name := dedupeFileName(diffFileName(d), seen)
 		path := filepath.Join(dir, name)
-		if err := os.WriteFile(path, []byte(d.Diff), 0o644); err != nil {
+		if err := os.WriteFile(path, []byte(d.Diff), 0o600); err != nil {
 			return fmt.Errorf("writing %s: %w", path, err)
 		}
 	}
@@ -88,10 +88,10 @@ func openInDiffTool(result *renderdiff.DiffResult) error {
 		// Replace .diff extension with .yaml for clarity in the diff tool.
 		name = strings.TrimSuffix(name, ".diff") + ".yaml"
 
-		if err := os.WriteFile(filepath.Join(baseDir, name), d.BaseYAML, 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(baseDir, name), d.BaseYAML, 0o600); err != nil {
 			return fmt.Errorf("writing base file for %s: %w", d.Path, err)
 		}
-		if err := os.WriteFile(filepath.Join(headDir, name), d.HeadYAML, 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(headDir, name), d.HeadYAML, 0o600); err != nil {
 			return fmt.Errorf("writing head file for %s: %w", d.Path, err)
 		}
 	}

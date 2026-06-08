@@ -4,6 +4,7 @@ package appset
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -43,7 +44,7 @@ func ParseApplicationSets(renderedYAML []byte) (*ParseResult, error) {
 	for {
 		var doc map[string]interface{}
 		err := decoder.Decode(&doc)
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {

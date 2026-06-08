@@ -842,7 +842,7 @@ func TestExtractPathsFromOverlays_Basic(t *testing.T) {
 	g.Expect(envPaths[Staging]).NotTo(BeEmpty())
 
 	// Should have extracted paths
-	var paths []string
+	paths := make([]string, 0, len(envPaths[Staging]))
 	for _, cp := range envPaths[Staging] {
 		paths = append(paths, cp.Path)
 	}

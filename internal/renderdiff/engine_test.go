@@ -2,6 +2,7 @@ package renderdiff
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -143,13 +144,13 @@ func TestEngine_NonKustomizationError_ExcludedFromDiffs(t *testing.T) {
 	head := &fakeBuilder{
 		exist: map[string]bool{"components/plain/staging": true},
 		errs: map[string]error{
-			"components/plain/staging": fmt.Errorf("unable to find one of 'kustomization.yaml', 'kustomization.yml' or 'Kustomization' in directory '/tmp/plain'"),
+			"components/plain/staging": errors.New("unable to find one of 'kustomization.yaml', 'kustomization.yml' or 'Kustomization' in directory '/tmp/plain'"),
 		},
 	}
 	base := &fakeBuilder{
 		exist: map[string]bool{"components/plain/staging": true},
 		errs: map[string]error{
-			"components/plain/staging": fmt.Errorf("unable to find one of 'kustomization.yaml', 'kustomization.yml' or 'Kustomization' in directory '/tmp/plain'"),
+			"components/plain/staging": errors.New("unable to find one of 'kustomization.yaml', 'kustomization.yml' or 'Kustomization' in directory '/tmp/plain'"),
 		},
 	}
 
@@ -172,7 +173,7 @@ func TestEngine_MixedErrors_OnlyGenuineInDiffs(t *testing.T) {
 			"components/broken/staging": true,
 		},
 		errs: map[string]error{
-			"components/plain/staging": fmt.Errorf("unable to find one of 'kustomization.yaml', 'kustomization.yml' or 'Kustomization' in directory '/tmp/plain'"),
+			"components/plain/staging": errors.New("unable to find one of 'kustomization.yaml', 'kustomization.yml' or 'Kustomization' in directory '/tmp/plain'"),
 		},
 		yamls: map[string][]byte{}, // broken will get generic error
 	}
@@ -182,7 +183,7 @@ func TestEngine_MixedErrors_OnlyGenuineInDiffs(t *testing.T) {
 			"components/broken/staging": true,
 		},
 		errs: map[string]error{
-			"components/plain/staging": fmt.Errorf("unable to find one of 'kustomization.yaml', 'kustomization.yml' or 'Kustomization' in directory '/tmp/plain'"),
+			"components/plain/staging": errors.New("unable to find one of 'kustomization.yaml', 'kustomization.yml' or 'Kustomization' in directory '/tmp/plain'"),
 		},
 		yamls: map[string][]byte{"components/broken/staging": []byte("valid: yaml\n")},
 	}
