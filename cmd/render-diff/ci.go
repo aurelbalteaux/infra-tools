@@ -143,7 +143,7 @@ func postCIComment(ctx context.Context, result *renderdiff.DiffResult, headSHA, 
 		return fmt.Errorf("invalid PR_NUMBER %q", prStr)
 	}
 
-	client, err := ghclient.NewCommentClient(token, repo, ghclient.RenderDiffCommentMarker)
+	client, err := ghclient.NewCommentClient(token, repo)
 	if err != nil {
 		return fmt.Errorf("creating GitHub client: %w", err)
 	}

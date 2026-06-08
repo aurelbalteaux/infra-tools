@@ -49,7 +49,7 @@ func TestUpsertComment_CreatesNew(t *testing.T) {
 	g := NewWithT(t)
 
 	fake := newFakeCommentsService()
-	client := &CommentClient{comments: fake, owner: "org", repo: "repo", marker: RenderDiffCommentMarker}
+	client := &CommentClient{comments: fake, owner: "org", repo: "repo"}
 
 	body := RenderDiffCommentMarker + "\n### Test\nHello"
 	err := client.UpsertComment(context.Background(), 42, body)
@@ -67,7 +67,7 @@ func TestUpsertComment_UpdatesExisting(t *testing.T) {
 		{ID: gh.Ptr(int64(99)), Body: gh.Ptr(RenderDiffCommentMarker + "\nold content")},
 	}
 
-	client := &CommentClient{comments: fake, owner: "org", repo: "repo", marker: RenderDiffCommentMarker}
+	client := &CommentClient{comments: fake, owner: "org", repo: "repo"}
 
 	body := RenderDiffCommentMarker + "\n### Updated\nNew content"
 	err := client.UpsertComment(context.Background(), 42, body)
@@ -86,10 +86,99 @@ func TestUpsertComment_IgnoresUnrelatedComments(t *testing.T) {
 		{ID: gh.Ptr(int64(2)), Body: gh.Ptr("another comment")},
 	}
 
-	client := &CommentClient{comments: fake, owner: "org", repo: "repo", marker: RenderDiffCommentMarker}
+	client := &CommentClient{comments: fake, owner: "org", repo: "repo"}
 
 	body := RenderDiffCommentMarker + "\nnew"
 	err := client.UpsertComment(context.Background(), 42, body)
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(fake.created).To(HaveLen(1)) // created new, didn't update existing
+}
+
+func TestUpsertCommentByMarker_CustomMarker(t *testing.T) {
+	g := NewWithT(t)
+	const customMarker = "<!-- custom-tool-marker -->"
+
+	fake := newFakeCommentsService()
+	client := &CommentClient{
+		comments: fake,
+		owner:    "test-owner",
+		repo:     "test-repo",
+	}
+
+	// First call creates comment with custom marker
+	body1 := customMarker + "\nNew comment"
+	err := client.UpsertCommentByMarker(context.Background(), 123, body1, customMarker)
+	g.Expect(err).NotTo(HaveOccurred())
+
+	g.Expect(fake.comments).To(HaveLen(1))
+	g.Expect(*fake.comments[0].Body).To(ContainSubstring(customMarker))
+
+	// Second call updates the same comment
+	body2 := customMarker + "\nUpdated comment"
+	err = client.UpsertCommentByMarker(context.Background(), 123, body2, customMarker)
+	g.Expect(err).NotTo(HaveOccurred())
+
+	g.Expect(fake.comments).To(HaveLen(1))
+	g.Expect(*fake.comments[0].Body).To(ContainSubstring("Updated comment"))
+}
+
+func TestUpsertCommentByMarker_EmptyMarkerError(t *testing.T) {
+	g := NewWithT(t)
+
+	fake := newFakeCommentsService()
+	client := &CommentClient{
+		comments: fake,
+		owner:    "test-owner",
+		repo:     "test-repo",
+	}
+
+	err := client.UpsertCommentByMarker(context.Background(), 123, "Comment", "")
+	g.Expect(err).To(HaveOccurred())
+	g.Expect(err.Error()).To(ContainSubstring("marker must not be empty"))
+}
+
+func TestUpsertCommentByMarker_MultipleMarkers(t *testing.T) {
+	g := NewWithT(t)
+	const marker1 = "<!-- tool-1 -->"
+	const marker2 = "<!-- tool-2 -->"
+
+	fake := newFakeCommentsService()
+	client := &CommentClient{
+		comments: fake,
+		owner:    "test-owner",
+		repo:     "test-repo",
+	}
+
+	// Create two comments with different markers
+	body1 := marker1 + "\nTool 1 comment"
+	err := client.UpsertCommentByMarker(context.Background(), 123, body1, marker1)
+	g.Expect(err).NotTo(HaveOccurred())
+
+	body2 := marker2 + "\nTool 2 comment"
+	err = client.UpsertCommentByMarker(context.Background(), 123, body2, marker2)
+	g.Expect(err).NotTo(HaveOccurred())
+
+	// Should have 2 separate comments
+	g.Expect(fake.comments).To(HaveLen(2))
+
+	// Update tool 1's comment - should only affect first comment
+	body1Updated := marker1 + "\nTool 1 updated"
+	err = client.UpsertCommentByMarker(context.Background(), 123, body1Updated, marker1)
+	g.Expect(err).NotTo(HaveOccurred())
+
+	g.Expect(fake.comments).To(HaveLen(2))
+
+	// Verify only first comment was updated
+	foundUpdated := false
+	foundUnchanged := false
+	for _, c := range fake.comments {
+		if *c.Body == body1Updated {
+			foundUpdated = true
+		}
+		if *c.Body == body2 {
+			foundUnchanged = true
+		}
+	}
+	g.Expect(foundUpdated).To(BeTrue())
+	g.Expect(foundUnchanged).To(BeTrue())
 }

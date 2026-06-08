@@ -62,12 +62,12 @@ func PostPRComment(ctx context.Context, marker string, buildBody func(runURL str
 		return fmt.Errorf("invalid PR_NUMBER %q", prStr)
 	}
 
-	client, err := ghclient.NewCommentClient(token, repo, marker)
+	client, err := ghclient.NewCommentClient(token, repo)
 	if err != nil {
 		return fmt.Errorf("creating GitHub client: %w", err)
 	}
 
-	if err := client.UpsertComment(ctx, prNumber, body); err != nil {
+	if err := client.UpsertCommentByMarker(ctx, prNumber, body, marker); err != nil {
 		return fmt.Errorf("posting PR comment: %w", err)
 	}
 
