@@ -27,7 +27,7 @@ func runOutputMode(ctx context.Context, mode OutputMode, result *renderdiff.Diff
 			}
 		}
 		if openDiff {
-			if err := openInDiffTool(result); err != nil {
+			if err := openInDiffTool(ctx, result); err != nil {
 				return fmt.Errorf("opening diff tool: %w", err)
 			}
 			return nil

@@ -1,3 +1,4 @@
+//nolint:testpackage // Test package uses internal package for access to private members
 package deptree
 
 import (

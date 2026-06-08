@@ -91,10 +91,12 @@ func validateDirectory(rootDir, dir string) ([]OrphanedFile, error) {
 	}
 
 	// Add deprecated patches
+	//nolint:staticcheck // SA1019: Intentionally support deprecated kustomization fields for backward compatibility
 	for _, patch := range kustomization.PatchesStrategicMerge {
 		referenced[normalizeResourcePath(string(patch))] = true
 	}
 
+	//nolint:staticcheck // SA1019: Intentionally support deprecated kustomization fields for backward compatibility
 	for _, patch := range kustomization.PatchesJson6902 {
 		if patch.Path != "" {
 			referenced[normalizeResourcePath(patch.Path)] = true
@@ -107,6 +109,7 @@ func validateDirectory(rootDir, dir string) ([]OrphanedFile, error) {
 	}
 
 	// Bases (deprecated, but still used)
+	//nolint:staticcheck // SA1019: Intentionally support deprecated kustomization fields for backward compatibility
 	for _, base := range kustomization.Bases {
 		referenced[normalizeResourcePath(base)] = true
 	}

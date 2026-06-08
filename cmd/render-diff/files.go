@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -59,7 +60,7 @@ func dedupeFileName(base string, seen map[string]int) string {
 // directories and opens them in the user's preferred diff tool for a
 // side-by-side folder comparison. Files are named after their component
 // and environment so they are easy to identify.
-func openInDiffTool(result *renderdiff.DiffResult) error {
+func openInDiffTool(ctx context.Context, result *renderdiff.DiffResult) error {
 	if len(result.Diffs) == 0 {
 		fmt.Println("No render differences to display.")
 		return nil
@@ -99,9 +100,9 @@ func openInDiffTool(result *renderdiff.DiffResult) error {
 	toolName := os.Getenv("DIFFTOOL")
 	var cmd *exec.Cmd
 	if toolName != "" {
-		cmd = exec.Command(toolName, baseDir, headDir)
+		cmd = exec.CommandContext(ctx, toolName, baseDir, headDir)
 	} else {
-		cmd = exec.Command("git", "difftool", "--no-index", "--dir-diff", baseDir, headDir)
+		cmd = exec.CommandContext(ctx, "git", "difftool", "--no-index", "--dir-diff", baseDir, headDir)
 	}
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout

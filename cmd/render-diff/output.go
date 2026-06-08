@@ -37,7 +37,7 @@ func runLocal(ctx context.Context, engine *renderdiff.Engine, affected map[detec
 		if err != nil {
 			logging.Fatal("render-diff failed", "err", err)
 		}
-		if err := openInDiffTool(result); err != nil {
+		if err := openInDiffTool(ctx, result); err != nil {
 			logging.Fatal("opening diff tool", "err", err)
 		}
 		return

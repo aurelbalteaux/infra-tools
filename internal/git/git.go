@@ -77,9 +77,9 @@ func CreateWorktree(ctx context.Context, repoRoot, ref string) (string, func(), 
 		return "", nil, fmt.Errorf("creating temp dir: %w", err)
 	}
 
+	//nolint:contextcheck // Cleanup should not be cancelled — use a fresh background context
 	cleanup := func() {
-		// Cleanup should not be cancelled — use a fresh background context.
-		cmd := exec.Command("git", "worktree", "remove", "--force", tmpDir)
+		cmd := exec.CommandContext(context.Background(), "git", "worktree", "remove", "--force", tmpDir)
 		cmd.Dir = repoRoot
 		if err := cmd.Run(); err != nil {
 			slog.Warn("failed to remove worktree", "path", tmpDir, "err", err)
