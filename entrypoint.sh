@@ -5,6 +5,13 @@ set -euo pipefail
 # It receives configuration via environment variables set by action.yml
 # and executes the appropriate infra-tools command.
 
+# Configure git to trust the workspace directory (mounted from host)
+# Docker containers run as a different user, so git sees ownership mismatch
+git config --global --add safe.directory /github/workspace 2>/dev/null || true
+if [[ -n "${REPO_ROOT:-}" && "$REPO_ROOT" != "." ]]; then
+  git config --global --add safe.directory "$(readlink -f "$REPO_ROOT" 2>/dev/null || echo "$REPO_ROOT")" 2>/dev/null || true
+fi
+
 # Helper function to ensure a git ref exists in the repository.
 # If the ref doesn't exist, tries to fetch it from origin.
 ensure_git_ref() {
