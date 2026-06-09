@@ -5,11 +5,39 @@ set -euo pipefail
 # It receives configuration via environment variables set by action.yml
 # and executes the appropriate infra-tools command.
 
+# Helper function to ensure a git ref exists in the repository.
+# If the ref doesn't exist, tries to fetch it from origin.
+ensure_git_ref() {
+  local ref="$1"
+  local repo_root="${2:-.}"
+
+  # Check if ref exists
+  if git -C "$repo_root" rev-parse --verify --quiet "$ref" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  # If ref looks like origin/branch, try fetching the branch from origin
+  if [[ "$ref" =~ ^origin/(.+)$ ]]; then
+    local branch="${BASH_REMATCH[1]}"
+    echo "Fetching $branch from origin to resolve $ref..." >&2
+    if git -C "$repo_root" fetch --depth=100 origin "$branch" 2>&1; then
+      # Create the remote tracking ref
+      git -C "$repo_root" branch -f "$branch" FETCH_HEAD 2>&1 || true
+      return 0
+    fi
+  fi
+
+  echo "Warning: Could not ensure git ref '$ref' exists" >&2
+  return 1
+}
+
 case "$COMMAND" in
   env-detector)
     ARGS=("--repo-root=${REPO_ROOT}")
 
     if [[ -n "${BASE_REF:-}" ]]; then
+      # Ensure the base ref exists (fetch from origin if needed)
+      ensure_git_ref "$BASE_REF" "$REPO_ROOT" || true
       ARGS+=("--base-ref=${BASE_REF}")
     fi
 
@@ -92,6 +120,8 @@ case "$COMMAND" in
     ARGS=("--repo-root=${REPO_ROOT}")
 
     if [[ -n "${BASE_REF:-}" ]]; then
+      # Ensure the base ref exists (fetch from origin if needed)
+      ensure_git_ref "$BASE_REF" "$REPO_ROOT" || true
       ARGS+=("--base-ref=${BASE_REF}")
     fi
 
